@@ -123,10 +123,13 @@ export function FocusTimer() {
   const handleCompleteTask = () => {
     recordSprint(true);
     if (selectedTaskIdRef.current) {
-      dispatch({
-        type: 'MOVE_TASK',
-        payload: { id: selectedTaskIdRef.current, status: 'done' },
-      });
+      const task = state.tasks.find((t) => t.id === selectedTaskIdRef.current);
+      if (task && task.status !== 'done') {
+        dispatch({
+          type: 'MOVE_TASK',
+          payload: { id: selectedTaskIdRef.current, status: 'done' },
+        });
+      }
     }
     resetToIdle();
   };

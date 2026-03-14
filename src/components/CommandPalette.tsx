@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTaskContext } from '../context/TaskContext';
-import { createTask } from '../types';
+import { useTaskContext, createTask } from '../context/TaskContext';
 
 interface CommandPaletteProps {
   onClose: () => void;
