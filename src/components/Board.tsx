@@ -8,7 +8,6 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { Task, TaskStatus } from '../types';
@@ -30,9 +29,16 @@ export function Board({ onEditTask }: BoardProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const searchLower = state.filter.search.toLowerCase();
+
   const filteredTasks = state.tasks.filter((task) => {
     const f = state.filter;
-    if (f.search && !task.title.toLowerCase().includes(f.search.toLowerCase())) return false;
+    if (f.search) {
+      const matchTitle = task.title.toLowerCase().includes(searchLower);
+      const matchNotes = task.notes.toLowerCase().includes(searchLower);
+      const matchTags = task.tags.some((t) => t.toLowerCase().includes(searchLower));
+      if (!matchTitle && !matchNotes && !matchTags) return false;
+    }
     if (f.showStarredOnly && !task.starred) return false;
     if (f.showTodayOnly) {
       const today = new Date().toISOString().slice(0, 10);
@@ -63,21 +69,6 @@ export function Board({ onEditTask }: BoardProps) {
     if (task) setActiveTask(task);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeStatus = getColumnFromId(active.id as string);
-    const overStatus = getColumnFromId(over.id as string);
-
-    if (activeStatus && overStatus && activeStatus !== overStatus) {
-      dispatch({
-        type: 'MOVE_TASK',
-        payload: { id: active.id as string, status: overStatus },
-      });
-    }
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
     const { active, over } = event;
@@ -86,13 +77,25 @@ export function Board({ onEditTask }: BoardProps) {
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    if (activeId === overId) return;
+    const activeStatus = getColumnFromId(activeId);
+    const overStatus = getColumnFromId(overId);
 
-    const activeTask = findTaskById(activeId);
+    // Cross-column move: only commit on drop, not on hover
+    if (activeStatus && overStatus && activeStatus !== overStatus) {
+      dispatch({
+        type: 'MOVE_TASK',
+        payload: { id: activeId, status: overStatus },
+      });
+      return;
+    }
+
+    // Same-column reorder
+    if (activeId === overId) return;
+    const draggedTask = findTaskById(activeId);
     const overTask = findTaskById(overId);
 
-    if (activeTask && overTask && activeTask.status === overTask.status) {
-      const columnTasks = tasksByStatus(activeTask.status);
+    if (draggedTask && overTask && draggedTask.status === overTask.status) {
+      const columnTasks = tasksByStatus(draggedTask.status);
       const oldIndex = columnTasks.findIndex((t) => t.id === activeId);
       const newIndex = columnTasks.findIndex((t) => t.id === overId);
       if (oldIndex !== -1 && newIndex !== -1) {
@@ -110,7 +113,6 @@ export function Board({ onEditTask }: BoardProps) {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="board">

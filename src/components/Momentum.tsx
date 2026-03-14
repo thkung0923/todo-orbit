@@ -15,13 +15,10 @@ export function Momentum() {
       (s) => s.completed && s.endedAt?.slice(0, 10) === today
     ).length;
 
-    // Calculate streak: consecutive days with at least 1 completion
+    // Calculate streak: consecutive days with at least 1 task completion
     const completionDays = new Set<string>();
     state.tasks.forEach((t) => {
       if (t.completedAt) completionDays.add(t.completedAt.slice(0, 10));
-    });
-    state.sprints.forEach((s) => {
-      if (s.completed && s.endedAt) completionDays.add(s.endedAt.slice(0, 10));
     });
 
     let streak = 0;

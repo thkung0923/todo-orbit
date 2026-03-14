@@ -3,61 +3,74 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Task } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 
+type TimerPhase = 'idle' | 'running' | 'paused' | 'finished';
+
 export function FocusTimer() {
   const { state, dispatch } = useTaskContext();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [plannedMinutes, setPlannedMinutes] = useState(25);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<TimerPhase>('idle');
+  const [, setSessionId] = useState<string | null>(null);
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string | null>(null);
+  const selectedTaskIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const plannedMinutesRef = useRef(25);
 
   const inFlightTasks = state.tasks.filter((t) => t.status === 'in-flight');
+  const boundTask = selectedTaskId
+    ? state.tasks.find((t) => t.id === selectedTaskId)
+    : null;
 
-  const stopTimer = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    setIsRunning(false);
   }, []);
 
-  const completeSession = useCallback(
+  // Record sprint session to DB
+  const recordSprint = useCallback(
     (completed: boolean) => {
-      stopTimer();
-      if (sessionId && startTimeRef.current) {
+      if (sessionIdRef.current && startTimeRef.current) {
         dispatch({
           type: 'UPDATE_SPRINT',
           payload: {
-            id: sessionId,
-            taskId: selectedTaskId,
+            id: sessionIdRef.current,
+            taskId: selectedTaskIdRef.current,
             startedAt: startTimeRef.current,
             endedAt: new Date().toISOString(),
-            plannedMinutes,
+            plannedMinutes: plannedMinutesRef.current,
             completed,
           },
         });
       }
-      setSessionId(null);
-      setSecondsLeft(0);
-      startTimeRef.current = null;
     },
-    [sessionId, selectedTaskId, plannedMinutes, dispatch, stopTimer]
+    [dispatch]
   );
 
-  const completeSessionRef = useRef(completeSession);
+  // Timer naturally finished → show post-sprint options
+  const onTimerDone = useCallback(() => {
+    clearTimer();
+    setPhase('finished');
+  }, [clearTimer]);
+
+  const onTimerDoneRef = useRef(onTimerDone);
   useEffect(() => {
-    completeSessionRef.current = completeSession;
-  }, [completeSession]);
+    onTimerDoneRef.current = onTimerDone;
+  }, [onTimerDone]);
 
   const startTimer = () => {
     const id = uuidv4();
     const now = new Date().toISOString();
     setSessionId(id);
+    sessionIdRef.current = id;
+    selectedTaskIdRef.current = selectedTaskId;
+    plannedMinutesRef.current = plannedMinutes;
     startTimeRef.current = now;
     setSecondsLeft(plannedMinutes * 60);
-    setIsRunning(true);
+    setPhase('running');
 
     dispatch({
       type: 'ADD_SPRINT',
@@ -74,7 +87,7 @@ export function FocusTimer() {
     intervalRef.current = window.setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
-          completeSessionRef.current(true);
+          onTimerDoneRef.current();
           return 0;
         }
         return s - 1;
@@ -83,20 +96,54 @@ export function FocusTimer() {
   };
 
   const togglePause = () => {
-    if (isRunning) {
-      stopTimer();
-    } else if (secondsLeft > 0) {
-      setIsRunning(true);
+    if (phase === 'running') {
+      clearTimer();
+      setPhase('paused');
+    } else if (phase === 'paused' && secondsLeft > 0) {
+      setPhase('running');
       intervalRef.current = window.setInterval(() => {
         setSecondsLeft((s) => {
           if (s <= 1) {
-            completeSessionRef.current(true);
+            onTimerDoneRef.current();
             return 0;
           }
           return s - 1;
         });
       }, 1000);
     }
+  };
+
+  // Post-sprint: just record the session
+  const handleRecord = () => {
+    recordSprint(true);
+    resetToIdle();
+  };
+
+  // Post-sprint: record session AND complete the bound task
+  const handleCompleteTask = () => {
+    recordSprint(true);
+    if (selectedTaskIdRef.current) {
+      dispatch({
+        type: 'MOVE_TASK',
+        payload: { id: selectedTaskIdRef.current, status: 'done' },
+      });
+    }
+    resetToIdle();
+  };
+
+  // Cancel / abort sprint
+  const handleCancel = () => {
+    clearTimer();
+    recordSprint(false);
+    resetToIdle();
+  };
+
+  const resetToIdle = () => {
+    setSessionId(null);
+    sessionIdRef.current = null;
+    setSecondsLeft(0);
+    setPhase('idle');
+    startTimeRef.current = null;
   };
 
   useEffect(() => {
@@ -115,7 +162,7 @@ export function FocusTimer() {
     <div className="focus-timer">
       <h3>專注衝刺</h3>
 
-      {!sessionId && (
+      {phase === 'idle' && (
         <>
           <select
             value={selectedTaskId ?? ''}
@@ -169,27 +216,44 @@ export function FocusTimer() {
           />
         </svg>
         <span className="timer-time">
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          {phase === 'finished'
+            ? '完成!'
+            : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`}
         </span>
       </div>
 
       <div className="timer-controls">
-        {!sessionId ? (
+        {phase === 'idle' && (
           <button className="btn btn-primary" onClick={startTimer}>
             開始專注
           </button>
-        ) : (
+        )}
+
+        {(phase === 'running' || phase === 'paused') && (
           <>
             <button className="btn btn-secondary" onClick={togglePause}>
-              {isRunning ? '暫停' : '繼續'}
+              {phase === 'running' ? '暫停' : '繼續'}
             </button>
-            <button
-              className="btn btn-danger"
-              onClick={() => completeSession(false)}
-            >
-              停止
+            <button className="btn btn-danger" onClick={handleCancel}>
+              取消
             </button>
           </>
+        )}
+
+        {phase === 'finished' && (
+          <div className="timer-post-actions">
+            <button className="btn btn-primary" onClick={handleRecord}>
+              記錄
+            </button>
+            {boundTask && boundTask.status !== 'done' && (
+              <button className="btn btn-secondary" onClick={handleCompleteTask}>
+                完成任務
+              </button>
+            )}
+            <button className="btn btn-ghost" onClick={handleCancel}>
+              放棄
+            </button>
+          </div>
         )}
       </div>
     </div>

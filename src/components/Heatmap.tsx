@@ -11,18 +11,10 @@ export function Heatmap() {
 
     const counts: Record<string, number> = {};
 
-    // Count completed tasks per day
+    // Count completed tasks per day (only task completions, not sprints)
     state.tasks.forEach((task) => {
       if (task.completedAt) {
         const day = task.completedAt.slice(0, 10);
-        counts[day] = (counts[day] ?? 0) + 1;
-      }
-    });
-
-    // Count completed sprints per day
-    state.sprints.forEach((sprint) => {
-      if (sprint.completed && sprint.endedAt) {
-        const day = sprint.endedAt.slice(0, 10);
         counts[day] = (counts[day] ?? 0) + 1;
       }
     });
@@ -40,7 +32,7 @@ export function Heatmap() {
     }
 
     return cells;
-  }, [state.tasks, state.sprints]);
+  }, [state.tasks]);
 
   const maxCount = Math.max(1, ...heatmapData.map((d) => d.count));
 

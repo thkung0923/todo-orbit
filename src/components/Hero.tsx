@@ -16,13 +16,10 @@ export function Hero({ onNewTask }: HeroProps) {
     ).length;
     const totalBacklog = state.tasks.filter((t) => t.status === 'backlog').length;
 
-    // Streak
+    // Streak: only count task completions
     const completionDays = new Set<string>();
     state.tasks.forEach((t) => {
       if (t.completedAt) completionDays.add(t.completedAt.slice(0, 10));
-    });
-    state.sprints.forEach((s) => {
-      if (s.completed && s.endedAt) completionDays.add(s.endedAt.slice(0, 10));
     });
 
     let streak = 0;
@@ -47,7 +44,7 @@ export function Hero({ onNewTask }: HeroProps) {
     }
 
     return { inFlight, doneToday, totalBacklog, streak };
-  }, [state.tasks, state.sprints]);
+  }, [state.tasks]);
 
   const { filter } = state;
   const { dispatch } = useTaskContext();
