@@ -1669,6 +1669,28 @@ ul, ol {
   white-space: nowrap;
 }
 
+.task-actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  justify-content: flex-end;
+}
+
+.task-actions .move-btn {
+  font-size: var(--text-xs);
+  padding: 2px 8px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.task-actions .move-btn:hover {
+  opacity: 1;
+}
+
+.task-card {
+  touch-action: manipulation;
+}
+
 /* ============================================================
    21. APP — Sidebar Toggle (Mobile)
    ============================================================ */

@@ -1,12 +1,30 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '../types';
+import type { Task, TaskStatus } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 
 interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
 }
+
+const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
+  backlog: 'in-flight',
+  'in-flight': 'done',
+  done: null,
+};
+
+const PREV_STATUS: Record<TaskStatus, TaskStatus | null> = {
+  backlog: null,
+  'in-flight': 'backlog',
+  done: 'in-flight',
+};
+
+const MOVE_LABELS: Record<TaskStatus, string> = {
+  backlog: '待辦',
+  'in-flight': '進行中',
+  done: '已完成',
+};
 
 export function TaskCard({ task, onEdit }: TaskCardProps) {
   const { dispatch } = useTaskContext();
@@ -36,12 +54,23 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
     });
   };
 
+  const moveTask = (e: React.MouseEvent, newStatus: TaskStatus) => {
+    e.stopPropagation();
+    dispatch({
+      type: 'MOVE_TASK',
+      payload: { id: task.id, status: newStatus },
+    });
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     const month = d.getMonth() + 1;
     const day = d.getDate();
     return `${month}/${day}`;
   };
+
+  const next = NEXT_STATUS[task.status];
+  const prev = PREV_STATUS[task.status];
 
   return (
     <div
@@ -80,6 +109,27 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
             {tag}
           </span>
         ))}
+      </div>
+
+      <div className="task-actions">
+        {prev && (
+          <button
+            className="btn btn-ghost btn-sm move-btn"
+            onClick={(e) => moveTask(e, prev)}
+            aria-label={`移到${MOVE_LABELS[prev]}`}
+          >
+            ← {MOVE_LABELS[prev]}
+          </button>
+        )}
+        {next && (
+          <button
+            className="btn btn-ghost btn-sm move-btn"
+            onClick={(e) => moveTask(e, next)}
+            aria-label={`移到${MOVE_LABELS[next]}`}
+          >
+            {MOVE_LABELS[next]} →
+          </button>
+        )}
       </div>
     </div>
   );
