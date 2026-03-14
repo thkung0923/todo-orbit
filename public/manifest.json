@@ -1,0 +1,14 @@
+{
+  "name": "Todo Orbit",
+  "short_name": "TodoOrbit",
+  "description": "不是普通清單的任務管理 App",
+  "start_url": "/todo-orbit/",
+  "scope": "/todo-orbit/",
+  "display": "standalone",
+  "background_color": "#1a1714",
+  "theme_color": "#f59e0b",
+  "orientation": "any",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
