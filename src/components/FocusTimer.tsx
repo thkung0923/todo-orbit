@@ -62,6 +62,10 @@ export function FocusTimer() {
   }, [onTimerDone]);
 
   const startTimer = () => {
+    // Prevent multiple active sprints
+    const activeSprint = state.sprints.find((s) => !s.endedAt);
+    if (activeSprint) return;
+
     const id = uuidv4();
     const now = new Date().toISOString();
     setSessionId(id);

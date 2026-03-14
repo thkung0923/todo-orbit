@@ -13,6 +13,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { Task, TaskStatus } from '../types';
 import { useTaskContext } from '../context/TaskContext';
+import { toLocalDate } from '../utils/date';
 import { Column } from './Column';
 import { TaskCard } from './TaskCard';
 
@@ -43,8 +44,8 @@ export function Board({ onEditTask }: BoardProps) {
     }
     if (f.showStarredOnly && !task.starred) return false;
     if (f.showTodayOnly) {
-      const today = new Date().toISOString().slice(0, 10);
-      if (task.dueAt?.slice(0, 10) !== today) return false;
+      const today = toLocalDate(new Date());
+      if (!task.dueAt || toLocalDate(new Date(task.dueAt)) !== today) return false;
     }
     if (f.tags.length > 0 && !f.tags.some((t) => task.tags.includes(t))) return false;
     if (f.status && task.status !== f.status) return false;
@@ -54,7 +55,11 @@ export function Board({ onEditTask }: BoardProps) {
   const tasksByStatus = (status: TaskStatus) =>
     filteredTasks
       .filter((t) => t.status === status)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) =>
+        status === 'done'
+          ? (b.completedAt ?? '').localeCompare(a.completedAt ?? '')
+          : a.order - b.order
+      );
 
   const findTaskById = (id: string) => state.tasks.find((t) => t.id === id);
 

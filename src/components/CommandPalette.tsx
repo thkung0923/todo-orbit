@@ -46,7 +46,7 @@ export function CommandPalette({ onClose, onNewTask }: CommandPaletteProps) {
       action: () => {
         dispatch({
           type: 'SET_FILTER',
-          payload: { showTodayOnly: true },
+          payload: { search: '', tags: [], showStarredOnly: false, showTodayOnly: true, status: null },
         });
         onClose();
       },
@@ -58,7 +58,7 @@ export function CommandPalette({ onClose, onNewTask }: CommandPaletteProps) {
       action: () => {
         dispatch({
           type: 'SET_FILTER',
-          payload: { showStarredOnly: true },
+          payload: { search: '', tags: [], showStarredOnly: true, showTodayOnly: false, status: null },
         });
         onClose();
       },

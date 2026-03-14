@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTaskContext } from '../context/TaskContext';
+import { toLocalDate } from '../utils/date';
 
 export function Heatmap() {
   const { state } = useTaskContext();
@@ -14,7 +15,7 @@ export function Heatmap() {
     // Count completed tasks per day (only task completions, not sprints)
     state.tasks.forEach((task) => {
       if (task.completedAt) {
-        const day = task.completedAt.slice(0, 10);
+        const day = toLocalDate(new Date(task.completedAt));
         counts[day] = (counts[day] ?? 0) + 1;
       }
     });
@@ -23,7 +24,7 @@ export function Heatmap() {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = toLocalDate(d);
       cells.push({
         date: dateStr,
         count: counts[dateStr] ?? 0,
